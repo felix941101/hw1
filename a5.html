@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>俄羅斯方塊 Tetris - 帶自製音效版</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js for dynamic synth audio generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .pixel-font {
+            font-family: 'Press Start 2P', monospace;
+        }
+        /* Custom Glowing & Arcade styling */
+        .arcade-card {
+            background: rgba(17, 24, 39, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+        /* Glassmorphic overlay buttons */
+        .btn-arcade {
+            transition: all 0.15s ease;
+            box-shadow: 0 4px 0 rgba(0, 0, 0, 0.4);
+        }
+        .btn-arcade:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-white min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 select-none overflow-x-hidden">
+
+    <!-- Main Game Container -->
+    <div class="w-full max-w-4xl flex flex-col items-center">
+        <!-- Header -->
+        <header class="text-center mb-4">
+            <h1 class="pixel-font text-2xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 tracking-wider mb-2">
+                TETRIS
+            </h1>
+            <p class="text-xs sm:text-sm text-slate-400">音效合成版 • 支持鍵盤與觸控操作</p>
+        </header>
+
+        <!-- Main Workspace -->
+        <div class="w-full flex flex-col lg:flex-row gap-4 items-center justify-center">
+            
+            <!-- Left Panel / Stats -->
+            <div class="w-full lg:w-48 flex lg:flex-col justify-between gap-3 order-2 lg:order-1">
+                <div class="arcade-card p-4 rounded-xl flex-1 text-center">
+                    <span class="text-xs text-slate-400 block mb-1 font-semibold tracking-wider">SCORE</span>
+                    <span id="score" class="pixel-font text-lg sm:text-xl text-yellow-400">0</span>
+                </div>
+                <div class="arcade-card p-4 rounded-xl flex-1 text-center">
+                    <span class="text-xs text-slate-400 block mb-1 font-semibold tracking-wider">LINES</span>
+                    <span id="lines" class="pixel-font text-lg sm:text-xl text-cyan-400">0</span>
+                </div>
+                <div class="arcade-card p-4 rounded-xl flex-1 text-center">
+                    <span class="text-xs text-slate-400 block mb-1 font-semibold tracking-wider">LEVEL</span>
+                    <span id="level" class="pixel-font text-lg sm:text-xl text-pink-500">1</span>
+                </div>
+            </div>
+
+            <!-- Center Screen: Game Canvas -->
+            <div class="relative arcade-card p-2 sm:p-4 rounded-2xl flex flex-col items-center border-2 border-indigo-500/30 order-1 lg:order-2">
+                <canvas id="tetris" width="240" height="480" class="bg-slate-900 rounded-lg border border-slate-800 shadow-inner"></canvas>
+                
+                <!-- Game Over / Start Overlay -->
+                <div id="overlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center p-6 text-center z-10 transition-opacity duration-300">
+                    <div id="overlay-title" class="pixel-font text-2xl text-cyan-400 mb-4 animate-pulse">
+                        READY?
+                    </div>
+                    <p id="overlay-desc" class="text-xs sm:text-sm text-slate-300 mb-6 max-w-xs leading-relaxed">
+                        點擊下方按鈕開始遊戲！<br><span class="text-slate-400 text-xs">（遊戲包含聲音效果，請開啟音量）</span>
+                    </p>
+                    <button id="start-btn" class="btn-arcade bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold px-8 py-4 rounded-xl text-sm pixel-font flex items-center gap-2">
+                        <i class="fa-solid fa-play"></i> START GAME
+                    </button>
+                </div>
+            </div>
+
+            <!-- Right Panel / Preview & Audio Controls -->
+            <div class="w-full lg:w-48 flex lg:flex-col justify-between gap-3 order-3">
+                <!-- Hold/Next Box -->
+                <div class="arcade-card p-4 rounded-xl flex-1 flex flex-col items-center justify-center">
+                    <span class="text-xs text-slate-400 block mb-2 font-semibold tracking-wider">NEXT</span>
+                    <canvas id="next" width="96" height="96" class="bg-slate-900/50 rounded-lg border border-slate-800/80"></canvas>
+                </div>
+
+                <!-- Control Quick Bar & Sound Toggle -->
+                <div class="arcade-card p-4 rounded-xl flex-1 flex flex-col items-center justify-center gap-3">
+                    <button id="sound-toggle-btn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i id="sound-icon" class="fa-solid fa-volume-high text-cyan-400"></i>
+                        <span id="sound-text">BGM / SFX On</span>
+                    </button>
+                    <button id="pause-btn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 py-2.5 px-4 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition">
+                        <i id="pause-icon" class="fa-solid fa-pause text-yellow-400"></i>
+                        <span id="pause-text">Pause</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Touch Controls for Mobile Devices -->
+        <div class="w-full max-w-md mt-4 grid grid-cols-5 gap-2 px-2 sm:hidden">
+            <button id="btn-left" class="btn-arcade bg-slate-800 active:bg-cyan-600 text-white p-4 rounded-xl text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-arrow-left"></i>
+            </button>
+            <button id="btn-rotate" class="btn-arcade bg-slate-800 active:bg-purple-600 text-white p-4 rounded-xl text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-rotate-right"></i>
+            </button>
+            <button id="btn-right" class="btn-arcade bg-slate-800 active:bg-cyan-600 text-white p-4 rounded-xl text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-arrow-right"></i>
+            </button>
+            <button id="btn-down" class="btn-arcade bg-slate-800 active:bg-blue-600 text-white p-4 rounded-xl text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-arrow-down"></i>
+            </button>
+            <button id="btn-drop" class="btn-arcade bg-gradient-to-r from-pink-500 to-rose-600 text-white p-4 rounded-xl text-xl font-bold flex items-center justify-center">
+                <i class="fa-solid fa-angles-down"></i>
+            </button>
+        </div>
+
+        <!-- Instructions Footer -->
+        <footer class="mt-4 text-center text-xs text-slate-500 hidden sm:block">
+            <p>操作說明: <span class="text-slate-300">← / →</span> 移動, <span class="text-slate-300">↑</span> 旋轉, <span class="text-slate-300">↓</span> 加速下降, <span class="text-slate-300">Space</span> 直接硬降, <span class="text-slate-300">P</span> 暫停</p>
+        </footer>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. SOUND SYSTEM (Tone.js Synthetic Audio)
+        // ==========================================
+        let soundEnabled = true;
+        let isAudioContextStarted = false;
+
+        // Sound Synths
+        let sfxSynth, moveSynth, lineSynth, dropSynth, bgmPolySynth;
+        let bgmLoop;
+
+        function initAudioEngine() {
+            if (isAudioContextStarted) return;
+            Tone.start();
+            isAudioContextStarted = true;
+
+            // SFX Synthesizers
+            sfxSynth = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+            }).toDestination();
+            sfxSynth.volume.value = -6;
+
+            moveSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.01,
+                octaves: 2,
+                envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
+            }).toDestination();
+            moveSynth.volume.value = -12;
+
+            dropSynth = new Tone.MembraneSynth({
+                pitchDecay: 0.05,
+                octaves: 4,
+                envelope: { attack: 0.001, decay: 0.15, sustain: 0, release: 0.1 }
+            }).toDestination();
+            dropSynth.volume.value = -6;
+
+            lineSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2 }
+            }).toDestination();
+            lineSynth.volume.value = -8;
+
+            // BGM Synthesizer (Classic Korobeiniki / Tetris Theme adaptation)
+            bgmPolySynth = new Tone.Synth({
+                oscillator: { type: 'pulse', width: 0.25 },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.1 }
+            }).toDestination();
+            bgmPolySynth.volume.value = -16;
+
+            // BGM Melody Sequence (Korobeiniki theme)
+            const melody = [
+                { time: '0:0', note: 'E5', duration: '8n' },
+                { time: '0:0:2', note: 'B4', duration: '16n' },
+                { time: '0:0:3', note: 'C5', duration: '16n' },
+                { time: '0:1', note: 'D5', duration: '8n' },
+                { time: '0:1:2', note: 'C5', duration: '16n' },
+                { time: '0:1:3', note: 'B4', duration: '16n' },
+                { time: '0:2', note: 'A4', duration: '8n' },
+                { time: '0:2:2', note: 'A4', duration: '16n' },
+                { time: '0:2:3', note: 'C5', duration: '16n' },
+                { time: '0:3', note: 'E5', duration: '8n' },
+                { time: '0:3:2', note: 'D5', duration: '16n' },
+                { time: '0:3:3', note: 'C5', duration: '16n' },
+
+                { time: '1:0', note: 'B4', duration: '8n.' },
+                { time: '1:0:3', note: 'C5', duration: '16n' },
+                { time: '1:1', note: 'D5', duration: '8n' },
+                { time: '1:2', note: 'E5', duration: '8n' },
+                { time: '1:3', note: 'C5', duration: '8n' },
+                { time: '2:0', note: 'A4', duration: '8n' },
+                { time: '2:1', note: 'A4', duration: '4n' },
+            ];
+
+            const part = new Tone.Part((time, value) => {
+                if (soundEnabled) {
+                    bgmPolySynth.triggerAttackRelease(value.note, value.duration, time);
+                }
+            }, melody);
+
+            part.loop = true;
+            part.loopEnd = '2:2';
+            Tone.Transport.bpm.value = 130;
+            Tone.Transport.start();
+            part.start(0);
+        }
+
+        // Sound FX Playback Functions
+        function playSound(type) {
+            if (!soundEnabled || !isAudioContextStarted) return;
+
+            const now = Tone.now();
+            try {
+                switch (type) {
+                    case 'move':
+                        moveSynth.triggerAttackRelease('C2', '16n', now);
+                        break;
+                    case 'rotate':
+                        sfxSynth.triggerAttackRelease('G4', '32n', now);
+                        break;
+                    case 'drop':
+                        dropSynth.triggerAttackRelease('C1', '16n', now);
+                        break;
+                    case 'clear':
+                        lineSynth.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '16n', now);
+                        break;
+                    case 'gameover':
+                        sfxSynth.triggerAttackRelease('C3', '8n', now);
+                        sfxSynth.triggerAttackRelease('G2', '8n', now + 0.15);
+                        sfxSynth.triggerAttackRelease('Eb2', '4n', now + 0.3);
+                        break;
+                }
+            } catch (e) {
+                // Ignore audio trigger errors if context is interrupted
+            }
+        }
+
+        // ==========================================
+        // 2. TETRIS GAME CORE LOGIC
+        // ==========================================
+        const canvas = document.getElementById('tetris');
+        const context = canvas.getContext('2d');
+        const nextCanvas = document.getElementById('next');
+        const nextContext = nextCanvas.getContext('2d');
+
+        // Scale factors
+        const COLS = 10;
+        const ROWS = 20;
+        const BLOCK_SIZE = 24; // 240x480 resolution
+
+        context.scale(BLOCK_SIZE, BLOCK_SIZE);
+        nextContext.scale(24, 24);
+
+        // Vibrant Colors for Pieces
+        const COLORS = [
+            null,
+            '#00f0f0', // 1: I - Cyan
+            '#0000f0', // 2: J - Blue
+            '#f0a000', // 3: L - Orange
+            '#f0f000', // 4: O - Yellow
+            '#00f000', // 5: S - Green
+            '#a000f0', // 6: T - Purple
+            '#f00000'  // 7: Z - Red
+        ];
+
+        // Tetromino Matrix Definitions
+        const PIECES = [
+            [],
+            [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]], // I
+            [[2, 0, 0], [2, 2, 2], [0, 0, 0]],                      // J
+            [[0, 0, 3], [3, 3, 3], [0, 0, 0]],                      // L
+            [[4, 4], [4, 4]],                                        // O
+            [[0, 5, 5], [5, 5, 0], [0, 0, 0]],                      // S
+            [[0, 6, 0], [6, 6, 6], [0, 0, 0]],                      // T
+            [[7, 7, 0], [0, 7, 7], [0, 0, 0]]                       // Z
+        ];
+
+        // Game State Variables
+        let arena = createMatrix(COLS, ROWS);
+        let player = {
+            pos: { x: 0, y: 0 },
+            matrix: null,
+            score: 0,
+            lines: 0,
+            level: 1
+        };
+        let nextPieceMatrix = null;
+        let dropCounter = 0;
+        let dropInterval = 1000;
+        let lastTime = 0;
+        let isGameOver = false;
+        let isPaused = false;
+        let gameRunning = false;
+        let animationFrameId = null;
+
+        function createMatrix(w, h) {
+            const matrix = [];
+            while (h--) {
+                matrix.push(new Array(w).fill(0));
+            }
+            return matrix;
+        }
+
+        // Matrix collision detection
+        function collide(arena, player) {
+            const [m, o] = [player.matrix, player.pos];
+            for (let y = 0; y < m.length; ++y) {
+                for (let x = 0; x < m[y].length; ++x) {
+                    if (m[y][x] !== 0 &&
+                       (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        // Merge fallen piece into arena
+        function merge(arena, player) {
+            player.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        arena[y + player.pos.y][x + player.pos.x] = value;
+                    }
+                });
+            });
+        }
+
+        // Rotate Matrix
+        function rotate(matrix, dir) {
+            for (let y = 0; y < matrix.length; ++y) {
+                for (let x = 0; x < y; ++x) {
+                    [
+                        matrix[x][y],
+                        matrix[y][x],
+                    ] = [
+                        matrix[y][x],
+                        matrix[x][y],
+                    ];
+                }
+            }
+            if (dir > 0) {
+                matrix.forEach(row => row.reverse());
+            } else {
+                matrix.reverse();
+            }
+        }
+
+        // Player Move Left/Right
+        function playerMove(dir) {
+            if (!gameRunning || isPaused) return;
+            player.pos.x += dir;
+            if (collide(arena, player)) {
+                player.pos.x -= dir;
+            } else {
+                playSound('move');
+            }
+        }
+
+        // Player Rotate
+        function playerRotate(dir) {
+            if (!gameRunning || isPaused) return;
+            const pos = player.pos.x;
+            let offset = 1;
+            rotate(player.matrix, dir);
+            while (collide(arena, player)) {
+                player.pos.x += offset;
+                offset = -(offset + (offset > 0 ? 1 : -1));
+                if (offset > player.matrix[0].length) {
+                    rotate(player.matrix, -dir);
+                    player.pos.x = pos;
+                    return;
+                }
+            }
+            playSound('rotate');
+        }
+
+        // Player Soft Drop
+        function playerDrop() {
+            if (!gameRunning || isPaused) return;
+            player.pos.y++;
+            if (collide(arena, player)) {
+                player.pos.y--;
+                merge(arena, player);
+                playerReset();
+                arenaSweep();
+                updateScore();
+            } else {
+                playSound('move');
+            }
+            dropCounter = 0;
+        }
+
+        // Player Hard Drop
+        function playerHardDrop() {
+            if (!gameRunning || isPaused) return;
+            while (!collide(arena, player)) {
+                player.pos.y++;
+            }
+            player.pos.y--;
+            merge(arena, player);
+            playSound('drop');
+            playerReset();
+            arenaSweep();
+            updateScore();
+            dropCounter = 0;
+        }
+
+        // Spawn new Piece
+        function playerReset() {
+            if (!nextPieceMatrix) {
+                nextPieceMatrix = PIECES[Math.floor(Math.random() * (PIECES.length - 1)) + 1];
+            }
+            player.matrix = nextPieceMatrix;
+            nextPieceMatrix = PIECES[Math.floor(Math.random() * (PIECES.length - 1)) + 1];
+            
+            player.pos.y = 0;
+            player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+
+            // Render Next Piece Preview
+            drawNextPiece();
+
+            // Game Over Check
+            if (collide(arena, player)) {
+                isGameOver = true;
+                gameRunning = false;
+                playSound('gameover');
+                showOverlay("GAME OVER", `最終得分: ${player.score}`);
+            }
+        }
+
+        // Sweep completed lines
+        function arenaSweep() {
+            let rowCount = 0;
+            outer: for (let y = arena.length - 1; y >= 0; --y) {
+                for (let x = 0; x < arena[y].length; ++x) {
+                    if (arena[y][x] === 0) {
+                        continue outer;
+                    }
+                }
+                const row = arena.splice(y, 1)[0].fill(0);
+                arena.unshift(row);
+                ++y;
+                rowCount++;
+            }
+
+            if (rowCount > 0) {
+                playSound('clear');
+                // Scoring formula
+                const lineScores = [0, 40, 100, 300, 1200];
+                player.score += lineScores[rowCount] * player.level;
+                player.lines += rowCount;
+                player.level = Math.floor(player.lines / 10) + 1;
+                // Increase speed with level
+                dropInterval = Math.max(100, 1000 - (player.level - 1) * 80);
+            }
+        }
+
+        // Update score display
+        function updateScore() {
+            document.getElementById('score').innerText = player.score;
+            document.getElementById('lines').innerText = player.lines;
+            document.getElementById('level').innerText = player.level;
+        }
+
+        // ==========================================
+        // 3. CANVAS RENDERING FUNCTIONS
+        // ==========================================
+        function draw() {
+            // Clear main canvas with dark slate background
+            context.fillStyle = '#0f172a';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Draw subtle background grid lines
+            drawGrid();
+
+            // Draw landed blocks
+            drawMatrix(arena, { x: 0, y: 0 });
+
+            // Draw ghost piece (prediction outline)
+            if (player.matrix && gameRunning && !isPaused) {
+                drawGhostPiece();
+                drawMatrix(player.matrix, player.pos);
+            }
+        }
+
+        function drawGrid() {
+            context.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+            context.lineWidth = 0.05;
+            for (let x = 0; x < COLS; x++) {
+                context.beginPath();
+                context.moveTo(x, 0);
+                context.lineTo(x, ROWS);
+                context.stroke();
+            }
+            for (let y = 0; y < ROWS; y++) {
+                context.beginPath();
+                context.moveTo(0, y);
+                context.lineTo(COLS, y);
+                context.stroke();
+            }
+        }
+
+        // Draw individual Matrix
+        function drawMatrix(matrix, offset) {
+            matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        const color = COLORS[value];
+                        
+                        // Main block body
+                        context.fillStyle = color;
+                        context.fillRect(x + offset.x, y + offset.y, 1, 1);
+
+                        // Highlight / Inner Bevel
+                        context.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        context.fillRect(x + offset.x, y + offset.y, 1, 0.1);
+                        context.fillRect(x + offset.x, y + offset.y, 0.1, 1);
+
+                        // Shadow / Outer Bevel
+                        context.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        context.fillRect(x + offset.x, y + offset.y + 0.9, 1, 0.1);
+                        context.fillRect(x + offset.x + 0.9, y + offset.y, 0.1, 1);
+                    }
+                });
+            });
+        }
+
+        // Draw Ghost Piece (Shows where the piece will drop)
+        function drawGhostPiece() {
+            const ghost = {
+                pos: { x: player.pos.x, y: player.pos.y },
+                matrix: player.matrix
+            };
+
+            while (!collide(arena, ghost)) {
+                ghost.pos.y++;
+            }
+            ghost.pos.y--;
+
+            // Render ghost outline
+            ghost.matrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        context.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+                        context.lineWidth = 0.08;
+                        context.strokeRect(x + ghost.pos.x + 0.05, y + ghost.pos.y + 0.05, 0.9, 0.9);
+                    }
+                });
+            });
+        }
+
+        // Draw Next Piece Preview
+        function drawNextPiece() {
+            nextContext.fillStyle = '#0f172a';
+            nextContext.fillRect(0, 0, nextCanvas.width, nextCanvas.height);
+
+            if (!nextPieceMatrix) return;
+
+            // Calculate center offset for next piece canvas
+            const offsetX = (4 - nextPieceMatrix[0].length) / 2;
+            const offsetY = (4 - nextPieceMatrix.length) / 2;
+
+            nextPieceMatrix.forEach((row, y) => {
+                row.forEach((value, x) => {
+                    if (value !== 0) {
+                        const color = COLORS[value];
+                        nextContext.fillStyle = color;
+                        nextContext.fillRect(x + offsetX, y + offsetY, 1, 1);
+
+                        nextContext.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                        nextContext.fillRect(x + offsetX, y + offsetY, 1, 0.1);
+                        nextContext.fillRect(x + offsetX, y + offsetY, 0.1, 1);
+
+                        nextContext.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                        nextContext.fillRect(x + offsetX, y + offsetY, 1, 0.1);
+                        nextContext.fillRect(x + offsetX + 0.9, y + offsetY, 0.1, 1);
+                    }
+                });
+            });
+        }
+
+        // ==========================================
+        // 4. GAME LOOP & STATE MANAGEMENT
+        // ==========================================
+        function update(time = 0) {
+            if (!gameRunning) return;
+
+            const deltaTime = time - lastTime;
+            lastTime = time;
+
+            if (!isPaused) {
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    playerDrop();
+                }
+            }
+
+            draw();
+            animationFrameId = requestAnimationFrame(update);
+        }
+
+        function startGame() {
+            initAudioEngine();
+            arena = createMatrix(COLS, ROWS);
+            player.score = 0;
+            player.lines = 0;
+            player.level = 1;
+            dropInterval = 1000;
+            isGameOver = false;
+            isPaused = false;
+            gameRunning = true;
+
+            nextPieceMatrix = null;
+            playerReset();
+            updateScore();
+
+            hideOverlay();
+            lastTime = performance.now();
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            update();
+        }
+
+        function togglePause() {
+            if (!gameRunning || isGameOver) return;
+            isPaused = !isPaused;
+            const pauseText = document.getElementById('pause-text');
+            const pauseIcon = document.getElementById('pause-icon');
+
+            if (isPaused) {
+                pauseText.innerText = 'Resume';
+                pauseIcon.className = 'fa-solid fa-play text-green-400';
+                showOverlay("PAUSED", "遊戲已暫停");
+            } else {
+                pauseText.innerText = 'Pause';
+                pauseIcon.className = 'fa-solid fa-pause text-yellow-400';
+                hideOverlay();
+                lastTime = performance.now();
+                update();
+            }
+        }
+
+        function showOverlay(title, desc) {
+            const overlay = document.getElementById('overlay');
+            document.getElementById('overlay-title').innerText = title;
+            document.getElementById('overlay-desc').innerText = desc;
+            overlay.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        function hideOverlay() {
+            const overlay = document.getElementById('overlay');
+            overlay.classList.add('opacity-0', 'pointer-events-none');
+        }
+
+        // ==========================================
+        // 5. INPUT CONTROLS & EVENT LISTENERS
+        // ==========================================
+        document.addEventListener('keydown', event => {
+            if (isGameOver) return;
+
+            switch (event.keyCode) {
+                case 37: // Left Arrow
+                    playerMove(-1);
+                    break;
+                case 39: // Right Arrow
+                    playerMove(1);
+                    break;
+                case 40: // Down Arrow
+                    playerDrop();
+                    break;
+                case 38: // Up Arrow
+                    playerRotate(1);
+                    break;
+                case 32: // Spacebar
+                    event.preventDefault();
+                    playerHardDrop();
+                    break;
+                case 80: // P Key
+                    togglePause();
+                    break;
+            }
+        });
+
+        // Touch Control Buttons Event Bindings
+        document.getElementById('btn-left').addEventListener('click', () => playerMove(-1));
+        document.getElementById('btn-right').addEventListener('click', () => playerMove(1));
+        document.getElementById('btn-rotate').addEventListener('click', () => playerRotate(1));
+        document.getElementById('btn-down').addEventListener('click', () => playerDrop());
+        document.getElementById('btn-drop').addEventListener('click', () => playerHardDrop());
+
+        // UI Control Buttons
+        document.getElementById('start-btn').addEventListener('click', startGame);
+        document.getElementById('pause-btn').addEventListener('click', togglePause);
+
+        // Sound Toggle Button
+        document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+            soundEnabled = !soundEnabled;
+            const soundIcon = document.getElementById('sound-icon');
+            const soundText = document.getElementById('sound-text');
+
+            if (soundEnabled) {
+                soundIcon.className = 'fa-solid fa-volume-high text-cyan-400';
+                soundText.innerText = 'BGM / SFX On';
+                if (Tone.Transport.state !== 'started') Tone.Transport.start();
+            } else {
+                soundIcon.className = 'fa-solid fa-volume-xmark text-rose-500';
+                soundText.innerText = 'Sound Muted';
+            }
+        });
+
+        // Initial background render
+        draw();
+    </script>
+</body>
+</html>

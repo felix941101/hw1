@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>太空射擊遊戲</title>
+    <style>
+        :root {
+            --bg-1: #040816;
+            --bg-2: #0b1630;
+            --panel: rgba(15, 25, 45, 0.8);
+            --panel-border: rgba(123, 216, 255, 0.35);
+            --primary: #72eaff;
+            --primary-strong: #47d8ff;
+            --accent: #ffb851;
+            --danger: #ff657d;
+            --text: #eaf5ff;
+            --muted: #a8bfd6;
+            --shadow: rgba(4, 11, 22, 0.65);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden; /* 禁止頁面滾動 */
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background:
+                radial-gradient(circle at top, rgba(93, 141, 255, 0.35), transparent 38%),
+                radial-gradient(circle at bottom, rgba(0, 195, 255, 0.2), transparent 35%),
+                linear-gradient(180deg, var(--bg-1), var(--bg-2));
+            color: var(--text);
+            font-family: "Segoe UI", system-ui, sans-serif;
+        }
+
+        .game {
+            width: min(94vw, 720px);
+            max-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .panel {
+            position: relative;
+            width: 100%;
+            border: 1px solid var(--panel-border);
+            background: rgba(10, 18, 32, 0.72);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            box-shadow: 0 30px 60px var(--shadow), inset 0 1px 0 rgba(255,255,255,0.08);
+            padding: 12px 14px 10px;
+        }
+
+        .panel::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(114,234,255,0.08), transparent 35%, rgba(255,184,81,0.06));
+            border-radius: inherit;
+            pointer-events: none;
+        }
+
+        .game-header {
+            position: relative;
+            z-index: 1;
+            margin-bottom: 6px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: clamp(1.5rem, 2.4vw, 2.2rem);
+            letter-spacing: 0.08em;
+            color: var(--primary);
+            text-shadow: 0 0 14px rgba(114, 234, 255, 0.4);
+        }
+
+        .subtitle {
+            margin: 3px 0 0;
+            color: var(--muted);
+            font-size: clamp(0.75rem, 1.2vw, 0.88rem);
+            line-height: 1.4;
+        }
+
+        .bar {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin: 8px 0 10px;
+            padding: 8px 12px;
+            border: 1px solid rgba(123, 216, 255, 0.18);
+            background: rgba(20, 37, 64, 0.8);
+            border-radius: 10px;
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 20px;
+        }
+
+        .score-box {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            color: #f3fbff;
+            font-size: 0.95rem;
+        }
+
+        .score-label {
+            opacity: 0.82;
+        }
+
+        .score-value {
+            display: inline-block;
+            min-width: 36px;
+            color: var(--accent);
+            font-size: 1.1rem;
+            text-shadow: 0 0 12px rgba(255, 184, 81, 0.45);
+        }
+
+        button {
+            appearance: none;
+            border: 1px solid rgba(111, 201, 255, 0.6);
+            border-radius: 8px;
+            padding: 6px 12px;
+            color: var(--text);
+            background: linear-gradient(180deg, #1d3759, #122642);
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 0.85rem;
+            letter-spacing: 0.04em;
+            transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+            box-shadow: 0 4px 12px rgba(10, 21, 39, 0.45);
+        }
+
+        button:hover {
+            transform: translateY(-1px);
+            border-color: rgba(114, 234, 255, 0.8);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        canvas {
+            position: relative;
+            z-index: 1;
+            display: block;
+            width: 100%;
+            height: auto;
+            max-height: 68vh;
+            object-fit: contain;
+            border: 1px solid rgba(37, 112, 168, 0.8);
+            border-radius: 12px;
+            background: linear-gradient(180deg, #040c1b, #071426 38%, #081623);
+            box-shadow: inset 0 0 18px rgba(64, 169, 255, 0.12), 0 12px 24px rgba(0,0,0,0.28);
+        }
+    </style>
+</head>
+<body>
+    <main class="game">
+        <div class="panel">
+            <header class="game-header">
+                <h1>太空射擊</h1>
+                <p class="subtitle">← → 移動，空白鍵射擊；擊落敵機有機率掉落道具！</p>
+            </header>
+
+            <div class="bar">
+                <div class="stats-group">
+                    <div class="score-box">
+                        <span class="score-label">分數</span>
+                        <span id="score" class="score-value">0</span>
+                    </div>
+                    <div class="score-box">
+                        <span class="score-label">生命</span>
+                        <span id="lives" class="score-value">3</span>
+                    </div>
+                </div>
+                <button id="sound" type="button">音效：開</button>
+            </div>
+
+            <canvas id="screen" width="720" height="480" aria-label="太空射擊遊戲"></canvas>
+        </div>
+    </main>
+    <script>
+    (()=>{
+        const c=document.querySelector('#screen'),g=c.getContext('2d'),scoreText=document.querySelector('#score'),livesText=document.querySelector('#lives'),soundBtn=document.querySelector('#sound');
+        const keys={};let audio,sound=true,score=0,lives=3,frame=0,ended=false,player={x:360,y:430},shots=[],foes=[],sparks=[],items=[];
+        let powerTimer=0, messageText="", messageTimer=0;
+        const stars=Array.from({length:90},()=>({x:Math.random()*720,y:Math.random()*480,v:.5+Math.random()*1.8,r:.5+Math.random()*1.5}));
+        
+        function beep(freq,duration,wave='sine'){if(!sound)return;try{audio ||= new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),a=audio.createGain();o.type=wave;o.frequency.value=freq;a.gain.setValueAtTime(.04,audio.currentTime);a.gain.exponentialRampToValueAtTime(.001,audio.currentTime+duration);o.connect(a).connect(audio.destination);o.start();o.stop(audio.currentTime+duration)}catch(e){}}
+        
+        function reset(){score=0;lives=3;frame=0;ended=false;player={x:360,y:430};shots=[];foes=[];sparks=[];items=[];powerTimer=0;scoreText.textContent=score;livesText.textContent=lives}
+        
+        function explode(x,y,color){for(let i=0;i<12;i++)sparks.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5,life:25,color})}
+        
+        function hitPlayer(){
+            lives--;
+            livesText.textContent=lives;
+            explode(player.x,player.y,'#69eaff');
+            beep(100,.3,'sawtooth');
+            if(lives<=0) ended=true;
+        }
+
+        function showMessage(text){
+            messageText = text;
+            messageTimer = 60;
+        }
+        
+        function fire(){
+            if(ended)return;
+            shots.push({x:player.x,y:player.y-18});
+            beep(650,.08,'square');
+        }
+
+        function update(){
+            frame++;
+            if(powerTimer>0) powerTimer--;
+            if(messageTimer>0) messageTimer--;
+
+            stars.forEach(s=>{s.y+=s.v;if(s.y>480){s.y=0;s.x=Math.random()*720}});
+
+            if(!ended){
+                if(keys.ArrowLeft||keys.a)player.x-=5;
+                if(keys.ArrowRight||keys.d)player.x+=5;
+                player.x=Math.max(20,Math.min(700,player.x));
+
+                const fireRate = powerTimer > 0 ? 6 : 12;
+                if((keys[' ']||keys.ArrowUp)&&frame%fireRate===0) fire();
+
+                if(frame%48===0) foes.push({x:25+Math.random()*670,y:-20,v:1.5+Math.random()*1.3});
+
+                shots.forEach(b=>b.y-=8);
+
+                foes.forEach(e=>{
+                    e.y+=e.v;
+                    for(const b of shots) {
+                        if(!b.hit&&Math.abs(b.x-e.x)<22&&Math.abs(b.y-e.y)<22){
+                            b.hit=true;
+                            e.dead=true;
+                            score+=10;
+                            scoreText.textContent=score;
+                            explode(e.x,e.y,'#ffb851');
+                            beep(180,.2,'sawtooth');
+
+                            if(Math.random()<0.25){
+                                const types = ['score', 'life', 'power'];
+                                const type = types[Math.floor(Math.random()*types.length)];
+                                items.push({x:e.x, y:e.y, vy:1.2, type});
+                            }
+                        }
+                    }
+
+                    if(Math.abs(e.x-player.x)<27&&Math.abs(e.y-player.y)<25){
+                        e.dead=true;
+                        hitPlayer();
+                    }
+                });
+
+                items.forEach(i=>{
+                    i.y+=i.vy;
+                    if(Math.abs(i.x-player.x)<25 && Math.abs(i.y-player.y)<25){
+                        i.collected=true;
+                        beep(880,.15,'sine');
+                        if(i.type==='score'){
+                            score+=50;
+                            scoreText.textContent=score;
+                            showMessage("+50 分數！");
+                        } else if(i.type==='life'){
+                            if(lives<5) lives++;
+                            livesText.textContent=lives;
+                            showMessage("獲得生命 +1！");
+                        } else if(i.type==='power'){
+                            powerTimer=300;
+                            showMessage("強力連射發動！");
+                        }
+                    }
+                });
+
+                shots=shots.filter(b=>b.y>-10&&!b.hit);
+                foes=foes.filter(e=>!e.dead&&e.y<=480);
+                items=items.filter(i=>!i.collected&&i.y<=500);
+
+                sparks.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.life--});
+                sparks=sparks.filter(p=>p.life>0);
+            }
+        }
+
+        function ship(x,y,color,enemy=false){
+            g.save();
+            g.translate(x,y);
+            if(enemy)g.rotate(Math.PI);
+            g.fillStyle=color;
+            g.beginPath();
+            g.moveTo(0,-18);
+            g.lineTo(15,14);
+            g.lineTo(0,8);
+            g.lineTo(-15,14);
+            g.closePath();
+            g.fill();
+            g.fillStyle='#fff';
+            g.fillRect(-3,-2,6,9);
+            g.restore();
+        }
+
+        function draw(){
+            g.fillStyle='#050917';
+            g.fillRect(0,0,720,480);
+
+            g.fillStyle='#c5e6ff';
+            stars.forEach(s=>g.fillRect(s.x,s.y,s.r,s.r));
+
+            shots.forEach(b=>{
+                g.fillStyle= powerTimer>0 ? '#ffb851' : '#7af8ff';
+                g.fillRect(b.x-2,b.y-9,4,13);
+            });
+
+            foes.forEach(e=>ship(e.x,e.y,'#ff657d',true));
+
+            items.forEach(i=>{
+                g.save();
+                g.translate(i.x, i.y);
+                g.fillStyle = i.type==='score' ? '#72eaff' : (i.type==='life' ? '#65ff8a' : '#ffb851');
+                g.beginPath();
+                g.arc(0, 0, 10, 0, Math.PI*2);
+                g.fill();
+                g.fillStyle = '#050917';
+                g.font = 'bold 11px system-ui';
+                g.textAlign = 'center';
+                g.textBaseline = 'middle';
+                g.fillText(i.type==='score' ? '$' : (i.type==='life' ? '♥' : '⚡'), 0, 0);
+                g.restore();
+            });
+
+            sparks.forEach(p=>{
+                g.globalAlpha=p.life/25;
+                g.fillStyle=p.color;
+                g.fillRect(p.x,p.y,4,4);
+            });
+            g.globalAlpha=1;
+
+            if(!ended) ship(player.x,player.y, powerTimer>0 ? '#ffb851' : '#58e6ff');
+
+            if(messageTimer>0){
+                g.save();
+                g.textAlign='center';
+                g.font='bold 22px system-ui';
+                g.fillStyle='#ffb851';
+                g.shadowColor='rgba(255,184,81,0.5)';
+                g.shadowBlur=10;
+                g.fillText(messageText, 360, 80);
+                g.restore();
+            }
+
+            if(ended){
+                g.fillStyle='#050917cc';
+                g.fillRect(0,0,720,480);
+                g.textAlign='center';
+                g.fillStyle='white';
+                g.font='bold 38px system-ui';
+                g.fillText('遊戲結束',360,220);
+                g.font='20px system-ui';
+                g.fillText(`分數：${score} 按 Enter 重新開始`,360,262);
+            }
+        }
+
+        function loop(){
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        addEventListener('keydown',e=>{
+            if([' ','ArrowLeft','ArrowRight','ArrowUp'].includes(e.key))e.preventDefault();
+            keys[e.key]=true;
+            if(ended&&e.key==='Enter')reset();
+        });
+        
+        addEventListener('keyup',e=>keys[e.key]=false);
+
+        c.addEventListener('pointermove',e=>{
+            if(e.buttons){
+                const r=c.getBoundingClientRect();
+                player.x=(e.clientX-r.left)*720/r.width;
+            }
+        });
+
+        c.addEventListener('pointerdown',e=>{
+            if(ended)reset();
+            const r=c.getBoundingClientRect();
+            player.x=(e.clientX-r.left)*720/r.width;
+            fire();
+        });
+
+        soundBtn.onclick=()=>{
+            sound=!sound;
+            soundBtn.textContent=`音效：${sound?'開':'關'}`;
+            if(sound)beep(520,.1);
+        };
+
+        loop();
+    })();
+    </script>
+</body>
+</html>

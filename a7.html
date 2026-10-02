@@ -1,0 +1,1629 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1200">
+<meta name="theme-color" content="#10132d">
+<title>磚塊派對：立體打磚塊</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+body {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff9eb;
+    background:
+        radial-gradient(ellipse at 12% 15%, rgba(255,77,132,.22), transparent 30%),
+        radial-gradient(ellipse at 90% 78%, rgba(32,214,231,.19), transparent 31%),
+        radial-gradient(rgba(255,255,255,.12) .8px, transparent .8px),
+        #10132d;
+    background-size: auto, auto, 24px 24px;
+    font-family: "Trebuchet MS", "Microsoft JhengHei", sans-serif;
+}
+
+button {
+    font: inherit;
+}
+
+.arcade {
+    width: 1000px;
+    height: 700px;
+    flex: 0 0 1000px;
+}
+
+.topline {
+    height: 78px;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    margin: 0 4px 14px;
+}
+
+.eyebrow {
+    margin: 0 0 5px;
+    color: #d8ff58;
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: .16em;
+}
+
+h1 {
+    margin: 0;
+    font-size: 52px;
+    line-height: 1;
+    font-weight: 1000;
+    text-shadow:
+        3px 4px 0 #8241a1,
+        6px 7px 0 rgba(0,0,0,.25);
+}
+
+h1 span {
+    color: #d8ff58;
+}
+
+.top-note {
+    margin: 0 0 4px;
+    color: #b8bfd7;
+    font-size: 14px;
+    line-height: 1.5;
+    text-align: right;
+}
+
+.cabinet {
+    width: 1000px;
+    height: 600px;
+    padding: 14px;
+    border: 1px solid #444a70;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #272b4b, #171a35 62%);
+    box-shadow:
+        0 22px 0 #0b0d21,
+        0 34px 75px rgba(0,0,0,.42),
+        inset 0 2px 0 rgba(255,255,255,.1);
+}
+
+.toolbar {
+    width: 970px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 5px 12px;
+}
+
+.stats {
+    display: flex;
+    gap: 38px;
+}
+
+.stat {
+    display: grid;
+    gap: 2px;
+}
+
+.stat-label {
+    color: #b8bfd7;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+
+.stat-value {
+    min-width: 48px;
+    color: #fff9eb;
+    font-size: 20px;
+    font-weight: 1000;
+    font-variant-numeric: tabular-nums;
+}
+
+#score {
+    color: #d8ff58;
+}
+
+#lives {
+    color: #ff6687;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.icon-button,
+.start-button {
+    height: 40px;
+    border: 1px solid #4d547e;
+    border-radius: 9px;
+    color: #fff9eb;
+    background: linear-gradient(180deg, #343a60, #252a49);
+    box-shadow:
+        0 3px 0 #10132a,
+        inset 0 1px 0 rgba(255,255,255,.1);
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.icon-button {
+    padding: 0 12px;
+}
+
+.icon-button:hover,
+.start-button:hover {
+    filter: brightness(1.16);
+    transform: translateY(-2px);
+}
+
+.icon-button:active,
+.start-button:active {
+    transform: translateY(1px);
+}
+
+button:focus-visible {
+    outline: 3px solid #d8ff58;
+    outline-offset: 3px;
+}
+
+.screen-wrap {
+    position: relative;
+    width: 970px;
+    height: 522px;
+    overflow: hidden;
+    border: 1px solid rgba(177,229,255,.38);
+    border-radius: 11px;
+    background: #101a3d;
+    box-shadow:
+        inset 0 0 35px rgba(53,112,221,.2),
+        0 6px 0 #0c1028;
+}
+
+canvas {
+    display: block;
+    width: 968px;
+    height: 520px;
+    touch-action: none;
+}
+
+.overlay {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(13,17,43,.54);
+    backdrop-filter: blur(5px);
+}
+
+.overlay[hidden] {
+    display: none;
+}
+
+.dialog {
+    width: 370px;
+    padding: 25px 20px 22px;
+    border: 1px solid rgba(255,255,255,.23);
+    border-radius: 14px;
+    background: linear-gradient(
+        150deg,
+        rgba(46,53,97,.97),
+        rgba(27,31,67,.97)
+    );
+    box-shadow:
+        0 16px 40px rgba(0,0,0,.35),
+        inset 0 1px rgba(255,255,255,.14);
+    text-align: center;
+}
+
+.dialog h2 {
+    margin: 0 0 7px;
+    font-size: 29px;
+}
+
+.dialog p {
+    margin: 0 0 17px;
+    color: #d0d5eb;
+    line-height: 1.6;
+}
+
+.start-button {
+    min-width: 150px;
+    padding: 10px 19px;
+    border-color: #e3ff6c;
+    color: #171b31;
+    background: linear-gradient(180deg, #edff8c, #b9ed35);
+    box-shadow:
+        0 4px 0 #769b17,
+        0 9px 22px rgba(201,255,68,.2);
+    font-size: 16px;
+}
+
+.hintbar {
+    width: 970px;
+    height: 34px;
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 5px 0;
+    color: #c1c6dc;
+    font-size: 12px;
+}
+
+kbd {
+    padding: 3px 6px;
+    border: 1px solid #50577e;
+    border-radius: 5px;
+    color: #fff;
+    background: #292e50;
+    box-shadow: 0 2px 0 #10132b;
+    font: inherit;
+    font-size: 11px;
+}
+</style>
+</head>
+
+<body>
+
+<main class="arcade">
+
+<header class="topline">
+    <div>
+        <p class="eyebrow">ARCADE 07 · BREAK THE BLOCKS</p>
+        <h1>磚塊<span>派對</span></h1>
+    </div>
+
+    <p class="top-note">
+        接住彈珠，<br>
+        把彩虹打下來！
+    </p>
+</header>
+
+<section class="cabinet" aria-label="打磚塊遊戲">
+
+    <div class="toolbar">
+
+        <div class="stats" aria-live="polite">
+
+            <div class="stat">
+                <span class="stat-label">SCORE</span>
+                <span class="stat-value" id="score">0000</span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">BEST</span>
+                <span class="stat-value" id="best">0000</span>
+            </div>
+
+            <div class="stat">
+                <span class="stat-label">LIVES</span>
+                <span class="stat-value" id="lives">♥ ♥ ♥</span>
+            </div>
+
+        </div>
+
+        <div class="actions">
+            <button
+                class="icon-button"
+                id="pause"
+                type="button"
+                aria-label="暫停遊戲">
+                Ⅱ
+            </button>
+
+            <button
+                class="icon-button"
+                id="sound"
+                type="button"
+                aria-pressed="true">
+                ♫ 音效開
+            </button>
+        </div>
+
+    </div>
+
+    <div class="screen-wrap">
+
+        <canvas
+            id="game"
+            width="900"
+            height="560"
+            aria-label="使用左右方向鍵或移動滑鼠接住彈珠">
+        </canvas>
+
+        <div class="overlay" id="overlay">
+
+            <div class="dialog">
+
+                <h2 id="message-title">準備開打？</h2>
+
+                <p id="message-copy">
+                    移動球拍接住彈珠，清空所有彩色磚塊！
+                </p>
+
+                <button
+                    class="start-button"
+                    id="start"
+                    type="button">
+                    開始遊戲　▶
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="hintbar">
+        <span>
+            <kbd>←</kbd>
+            <kbd>→</kbd>
+            移動　
+            <kbd>空白鍵</kbd>
+            發球／暫停
+        </span>
+
+        <span>
+            滑鼠或手指也能控制
+        </span>
+    </div>
+
+</section>
+
+</main>
+
+<script>
+(() => {
+
+const canvas = document.querySelector('#game');
+const ctx = canvas.getContext('2d');
+
+const scoreEl = document.querySelector('#score');
+const bestEl = document.querySelector('#best');
+const livesEl = document.querySelector('#lives');
+
+const overlay = document.querySelector('#overlay');
+const titleEl = document.querySelector('#message-title');
+const copyEl = document.querySelector('#message-copy');
+const startButton = document.querySelector('#start');
+
+const pauseButton = document.querySelector('#pause');
+const soundButton = document.querySelector('#sound');
+
+const W = canvas.width;
+const H = canvas.height;
+
+const colors = [
+    '#ff577f',
+    '#ff9d43',
+    '#ffe156',
+    '#54e58b',
+    '#35c9ff',
+    '#ad78ff'
+];
+
+const keys = new Set();
+
+let audio;
+let soundOn = true;
+let state = 'ready';
+
+let score = 0;
+let lives = 3;
+let best = Number(
+    localStorage.getItem('block-party-best') || 0
+);
+
+let paddle;
+let ball;
+let bricks = [];
+let particles = [];
+
+let lastTime = 0;
+let pointerX = null;
+
+bestEl.textContent = String(best).padStart(4, '0');
+
+
+function beep(
+    frequency,
+    duration = .09,
+    wave = 'sine',
+    volume = .045
+) {
+
+    if (!soundOn) return;
+
+    try {
+
+        audio ||= new (
+            window.AudioContext ||
+            window.webkitAudioContext
+        )();
+
+        if (audio.state === 'suspended') {
+            audio.resume();
+        }
+
+        const oscillator = audio.createOscillator();
+        const gain = audio.createGain();
+
+        oscillator.type = wave;
+
+        oscillator.frequency.setValueAtTime(
+            frequency,
+            audio.currentTime
+        );
+
+        gain.gain.setValueAtTime(
+            volume,
+            audio.currentTime
+        );
+
+        gain.gain.exponentialRampToValueAtTime(
+            .001,
+            audio.currentTime + duration
+        );
+
+        oscillator.connect(gain).connect(audio.destination);
+
+        oscillator.start();
+        oscillator.stop(
+            audio.currentTime + duration
+        );
+
+    } catch (error) {}
+}
+
+
+function makeBricks() {
+
+    bricks = [];
+
+    const columns = 10;
+    const rows = 6;
+    const gap = 8;
+    const side = 7;
+
+    const brickW =
+        (W - 90 - (columns - 1) * gap) /
+        columns;
+
+    const brickH = 27;
+
+    const left =
+        (W -
+            (brickW * columns +
+            gap * (columns - 1))) / 2;
+
+    for (let row = 0; row < rows; row++) {
+
+        for (let col = 0; col < columns; col++) {
+
+            bricks.push({
+
+                x:
+                    left +
+                    col * (brickW + gap),
+
+                y:
+                    72 +
+                    row * 43,
+
+                w: brickW,
+                h: brickH,
+                d: side,
+
+                color: colors[row],
+
+                alive: true,
+
+                points:
+                    (rows - row) * 10
+            });
+        }
+    }
+}
+
+
+function resetBall() {
+
+    paddle = {
+        x: W / 2,
+        y: H - 54,
+        w: 126,
+        h: 17
+    };
+
+    ball = {
+        x: W / 2,
+        y: H - 83,
+        r: 10,
+        vx: 0,
+        vy: 0,
+        stuck: true
+    };
+}
+
+
+function resetGame() {
+
+    score = 0;
+    lives = 3;
+
+    particles = [];
+
+    scoreEl.textContent = '0000';
+    livesEl.textContent = '♥ ♥ ♥';
+
+    makeBricks();
+    resetBall();
+}
+
+
+function showOverlay(
+    title,
+    copy,
+    buttonText
+) {
+
+    titleEl.textContent = title;
+    copyEl.textContent = copy;
+    startButton.textContent = buttonText;
+
+    overlay.hidden = false;
+}
+
+
+function launch() {
+
+    if (
+        state === 'ready' ||
+        state === 'won' ||
+        state === 'lost'
+    ) {
+        resetGame();
+    }
+
+    if (state === 'paused') {
+
+        state = 'playing';
+
+        overlay.hidden = true;
+
+        pauseButton.textContent = 'Ⅱ';
+
+        pauseButton.setAttribute(
+            'aria-label',
+            '暫停遊戲'
+        );
+
+        return;
+    }
+
+    state = 'playing';
+
+    ball.stuck = false;
+
+    ball.vx =
+        (Math.random() < .5 ? -1 : 1) * 3.1;
+
+    ball.vy = -5.2;
+
+    overlay.hidden = true;
+
+    pauseButton.textContent = 'Ⅱ';
+
+    beep(620, .12, 'triangle');
+}
+
+
+function pause() {
+
+    if (state !== 'playing') return;
+
+    state = 'paused';
+
+    showOverlay(
+        '休息一下',
+        '準備好了再回來清磚塊。',
+        '繼續遊戲　▶'
+    );
+
+    pauseButton.textContent = '▶';
+
+    pauseButton.setAttribute(
+        'aria-label',
+        '繼續遊戲'
+    );
+}
+
+
+function burst(
+    x,
+    y,
+    color,
+    amount = 10
+) {
+
+    for (let i = 0; i < amount; i++) {
+
+        const angle =
+            Math.random() * Math.PI * 2;
+
+        const speed =
+            1 + Math.random() * 4;
+
+        particles.push({
+
+            x,
+            y,
+
+            vx:
+                Math.cos(angle) *
+                speed,
+
+            vy:
+                Math.sin(angle) *
+                speed,
+
+            life:
+                24 +
+                Math.random() * 18,
+
+            color,
+
+            size:
+                2 +
+                Math.random() * 4
+        });
+    }
+}
+
+
+function update(dt) {
+
+    if (state !== 'playing') return;
+
+    const step =
+        Math.min(dt / 16.67, 2);
+
+    if (
+        keys.has('ArrowLeft') ||
+        keys.has('a')
+    ) {
+        paddle.x -= 7 * step;
+    }
+
+    if (
+        keys.has('ArrowRight') ||
+        keys.has('d')
+    ) {
+        paddle.x += 7 * step;
+    }
+
+    if (pointerX !== null) {
+
+        paddle.x +=
+            (pointerX - paddle.x) *
+            Math.min(.35 * step, 1);
+    }
+
+    paddle.x = Math.max(
+        paddle.w / 2 + 9,
+        Math.min(
+            W - paddle.w / 2 - 9,
+            paddle.x
+        )
+    );
+
+
+    if (ball.stuck) {
+
+        ball.x = paddle.x;
+        ball.y = paddle.y - 24;
+
+    } else {
+
+        ball.x += ball.vx * step;
+        ball.y += ball.vy * step;
+
+
+        if (
+            ball.x <
+            ball.r + 8 ||
+            ball.x >
+            W - ball.r - 8
+        ) {
+
+            ball.vx *= -1;
+
+            ball.x =
+                Math.max(
+                    ball.r + 8,
+                    Math.min(
+                        W - ball.r - 8,
+                        ball.x
+                    )
+                );
+
+            beep(
+                340,
+                .055,
+                'sine',
+                .025
+            );
+        }
+
+
+        if (ball.y < ball.r + 8) {
+
+            ball.vy =
+                Math.abs(ball.vy);
+
+            beep(
+                390,
+                .055,
+                'sine',
+                .025
+            );
+        }
+
+
+        if (
+            ball.vy > 0 &&
+            ball.y + ball.r >= paddle.y - 3 &&
+            ball.y - ball.r <=
+                paddle.y + paddle.h &&
+            ball.x >=
+                paddle.x - paddle.w / 2 &&
+            ball.x <=
+                paddle.x + paddle.w / 2
+        ) {
+
+            const offset =
+                (ball.x - paddle.x) /
+                (paddle.w / 2);
+
+            const speed =
+                Math.min(
+                    8.8,
+                    Math.hypot(
+                        ball.vx,
+                        ball.vy
+                    ) + .12
+                );
+
+            const angle =
+                offset * .95;
+
+            ball.vx =
+                Math.sin(angle) * speed;
+
+            ball.vy =
+                -Math.cos(angle) * speed;
+
+            ball.y =
+                paddle.y -
+                ball.r -
+                2;
+
+            beep(
+                520 +
+                Math.abs(offset) * 170,
+                .08,
+                'triangle'
+            );
+        }
+
+
+        if (ball.y - ball.r > H) {
+
+            lives--;
+
+            livesEl.textContent =
+                Array.from(
+                    { length: lives },
+                    () => '♥'
+                ).join(' ') || '—';
+
+            burst(
+                ball.x,
+                H - 18,
+                '#ff6687',
+                18
+            );
+
+            beep(
+                155,
+                .32,
+                'sawtooth',
+                .06
+            );
+
+
+            if (lives <= 0) {
+
+                state = 'lost';
+
+                showOverlay(
+                    '再來一局？',
+                    `最後得分 ${score} 分，下一次一定能清光！`,
+                    '重新開始　↻'
+                );
+
+            } else {
+
+                resetBall();
+            }
+        }
+
+
+        for (const brick of bricks) {
+
+            if (
+                !brick.alive ||
+                ball.x + ball.r < brick.x ||
+                ball.x - ball.r >
+                    brick.x + brick.w ||
+                ball.y + ball.r < brick.y ||
+                ball.y - ball.r >
+                    brick.y + brick.h
+            ) {
+                continue;
+            }
+
+            brick.alive = false;
+
+            const overlapX =
+                Math.min(
+                    ball.x +
+                        ball.r -
+                        brick.x,
+
+                    brick.x +
+                        brick.w -
+                        ball.x +
+                        ball.r
+                );
+
+            const overlapY =
+                Math.min(
+                    ball.y +
+                        ball.r -
+                        brick.y,
+
+                    brick.y +
+                        brick.h -
+                        ball.y +
+                        ball.r
+                );
+
+            if (overlapX < overlapY) {
+                ball.vx *= -1;
+            } else {
+                ball.vy *= -1;
+            }
+
+            score += brick.points;
+
+            scoreEl.textContent =
+                String(score).padStart(4, '0');
+
+
+            if (score > best) {
+
+                best = score;
+
+                bestEl.textContent =
+                    String(best).padStart(4, '0');
+
+                localStorage.setItem(
+                    'block-party-best',
+                    String(best)
+                );
+            }
+
+
+            burst(
+                brick.x + brick.w / 2,
+                brick.y + brick.h / 2,
+                brick.color
+            );
+
+            beep(
+                280 + brick.points * 4,
+                .1,
+                'square',
+                .035
+            );
+
+            break;
+        }
+
+
+        if (
+            bricks.every(
+                brick => !brick.alive
+            )
+        ) {
+
+            state = 'won';
+
+            showOverlay(
+                '全場清空！',
+                `太強了！你拿下 ${score} 分，派對還沒結束。`,
+                '再玩一場　↻'
+            );
+
+            beep(
+                880,
+                .28,
+                'triangle',
+                .07
+            );
+        }
+    }
+
+
+    particles.forEach(particle => {
+
+        particle.x +=
+            particle.vx * step;
+
+        particle.y +=
+            particle.vy * step;
+
+        particle.vy +=
+            .08 * step;
+
+        particle.life -= step;
+    });
+
+
+    particles =
+        particles.filter(
+            particle => particle.life > 0
+        );
+}
+
+
+function roundedRect(
+    x,
+    y,
+    width,
+    height,
+    radius
+) {
+
+    ctx.beginPath();
+
+    ctx.roundRect(
+        x,
+        y,
+        width,
+        height,
+        radius
+    );
+}
+
+
+function drawBrick(brick) {
+
+    const d = brick.d;
+
+    ctx.save();
+
+    ctx.shadowColor = brick.color;
+    ctx.shadowBlur = 14;
+
+    roundedRect(
+        brick.x,
+        brick.y + d,
+        brick.w,
+        brick.h,
+        5
+    );
+
+    ctx.fillStyle =
+        'rgba(0,0,0,.4)';
+
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        brick.x + 5,
+        brick.y
+    );
+
+    ctx.lineTo(
+        brick.x + brick.w - 5,
+        brick.y
+    );
+
+    ctx.lineTo(
+        brick.x + brick.w,
+        brick.y + 5
+    );
+
+    ctx.lineTo(
+        brick.x + brick.w,
+        brick.y + brick.h - 4
+    );
+
+    ctx.quadraticCurveTo(
+        brick.x + brick.w,
+        brick.y + brick.h,
+        brick.x + brick.w - 5,
+        brick.y + brick.h
+    );
+
+    ctx.lineTo(
+        brick.x + 5,
+        brick.y + brick.h
+    );
+
+    ctx.quadraticCurveTo(
+        brick.x,
+        brick.y + brick.h,
+        brick.x,
+        brick.y + brick.h - 5
+    );
+
+    ctx.lineTo(
+        brick.x,
+        brick.y + 5
+    );
+
+    ctx.quadraticCurveTo(
+        brick.x,
+        brick.y,
+        brick.x + 5,
+        brick.y
+    );
+
+    ctx.closePath();
+
+
+    const gradient =
+        ctx.createLinearGradient(
+            brick.x,
+            brick.y,
+            brick.x,
+            brick.y + brick.h
+        );
+
+    gradient.addColorStop(
+        0,
+        '#ffffff'
+    );
+
+    gradient.addColorStop(
+        .12,
+        brick.color
+    );
+
+    gradient.addColorStop(
+        1,
+        brick.color
+    );
+
+    ctx.fillStyle = gradient;
+
+    ctx.fill();
+
+    ctx.strokeStyle =
+        'rgba(255,255,255,.62)';
+
+    ctx.lineWidth = 1;
+
+    ctx.stroke();
+
+
+    ctx.beginPath();
+
+    ctx.moveTo(
+        brick.x + 8,
+        brick.y + 4
+    );
+
+    ctx.lineTo(
+        brick.x + brick.w - 8,
+        brick.y + 4
+    );
+
+    ctx.strokeStyle =
+        'rgba(255,255,255,.52)';
+
+    ctx.lineWidth = 2;
+
+    ctx.stroke();
+
+    ctx.restore();
+}
+
+
+function draw() {
+
+    const background =
+        ctx.createLinearGradient(
+            0,
+            0,
+            0,
+            H
+        );
+
+    background.addColorStop(
+        0,
+        '#172350'
+    );
+
+    background.addColorStop(
+        .62,
+        '#111a3d'
+    );
+
+    background.addColorStop(
+        1,
+        '#192546'
+    );
+
+    ctx.fillStyle = background;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+
+    ctx.save();
+
+    ctx.strokeStyle =
+        'rgba(119,187,255,.075)';
+
+    ctx.lineWidth = 1;
+
+
+    for (
+        let x = 18;
+        x < W;
+        x += 36
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, H);
+
+        ctx.stroke();
+    }
+
+
+    for (
+        let y = 12;
+        y < H;
+        y += 36
+    ) {
+
+        ctx.beginPath();
+
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+
+        ctx.stroke();
+    }
+
+
+    const glow =
+        ctx.createRadialGradient(
+            W / 2,
+            H * .49,
+            30,
+            W / 2,
+            H * .49,
+            430
+        );
+
+    glow.addColorStop(
+        0,
+        'rgba(68,105,205,.16)'
+    );
+
+    glow.addColorStop(
+        1,
+        'rgba(68,105,205,0)'
+    );
+
+    ctx.fillStyle = glow;
+
+    ctx.fillRect(
+        0,
+        0,
+        W,
+        H
+    );
+
+    ctx.restore();
+
+
+    ctx.fillStyle =
+        'rgba(74,219,255,.45)';
+
+    ctx.fillRect(
+        8,
+        0,
+        3,
+        H
+    );
+
+    ctx.fillStyle =
+        'rgba(255,104,157,.4)';
+
+    ctx.fillRect(
+        W - 11,
+        0,
+        3,
+        H
+    );
+
+
+    bricks.forEach(brick => {
+
+        if (brick.alive) {
+            drawBrick(brick);
+        }
+
+    });
+
+
+    ctx.save();
+
+    ctx.shadowColor = '#42eaff';
+    ctx.shadowBlur = 18;
+
+    roundedRect(
+        paddle.x - paddle.w / 2,
+        paddle.y,
+        paddle.w,
+        paddle.h,
+        9
+    );
+
+    const paddleGradient =
+        ctx.createLinearGradient(
+            0,
+            paddle.y,
+            0,
+            paddle.y + paddle.h
+        );
+
+    paddleGradient.addColorStop(
+        0,
+        '#f6ffff'
+    );
+
+    paddleGradient.addColorStop(
+        .32,
+        '#57edff'
+    );
+
+    paddleGradient.addColorStop(
+        1,
+        '#168fc9'
+    );
+
+    ctx.fillStyle = paddleGradient;
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    roundedRect(
+        paddle.x -
+            paddle.w * .24,
+        paddle.y + 4,
+        paddle.w * .48,
+        3,
+        2
+    );
+
+    ctx.fillStyle =
+        'rgba(255,255,255,.78)';
+
+    ctx.fill();
+
+    ctx.restore();
+
+
+    ctx.save();
+
+    ctx.shadowColor = '#fff7a0';
+    ctx.shadowBlur = 20;
+
+    const ballGradient =
+        ctx.createRadialGradient(
+            ball.x - 3.5,
+            ball.y - 4,
+            1,
+            ball.x,
+            ball.y,
+            ball.r + 1
+        );
+
+    ballGradient.addColorStop(
+        0,
+        '#fff'
+    );
+
+    ballGradient.addColorStop(
+        .42,
+        '#fff49a'
+    );
+
+    ballGradient.addColorStop(
+        1,
+        '#ffad32'
+    );
+
+    ctx.beginPath();
+
+    ctx.arc(
+        ball.x,
+        ball.y,
+        ball.r,
+        0,
+        Math.PI * 2
+    );
+
+    ctx.fillStyle = ballGradient;
+
+    ctx.fill();
+
+    ctx.restore();
+
+
+    particles.forEach(particle => {
+
+        ctx.globalAlpha =
+            Math.min(
+                1,
+                particle.life / 18
+            );
+
+        ctx.fillStyle =
+            particle.color;
+
+        ctx.fillRect(
+            particle.x,
+            particle.y,
+            particle.size,
+            particle.size
+        );
+    });
+
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle =
+        'rgba(231,241,255,.45)';
+
+    ctx.font =
+        '700 12px Trebuchet MS, sans-serif';
+
+    ctx.textAlign = 'center';
+
+    ctx.fillText(
+        state === 'playing' &&
+        ball.stuck
+            ? '按空白鍵發球'
+            : ' ',
+        W / 2,
+        H - 15
+    );
+}
+
+
+function frame(time) {
+
+    const dt =
+        lastTime
+            ? time - lastTime
+            : 16.67;
+
+    lastTime = time;
+
+    update(dt);
+    draw();
+
+    requestAnimationFrame(frame);
+}
+
+
+function setPointer(event) {
+
+    const bounds =
+        canvas.getBoundingClientRect();
+
+    pointerX =
+        (event.clientX - bounds.left) *
+        W /
+        bounds.width;
+}
+
+
+canvas.addEventListener(
+    'pointermove',
+    setPointer
+);
+
+
+canvas.addEventListener(
+    'pointerdown',
+    event => {
+
+        setPointer(event);
+
+        if (
+            state === 'ready' ||
+            state === 'won' ||
+            state === 'lost'
+        ) {
+            launch();
+
+        } else if (
+            state === 'playing' &&
+            ball.stuck
+        ) {
+            launch();
+        }
+    }
+);
+
+
+canvas.addEventListener(
+    'pointerleave',
+    () => {
+        pointerX = null;
+    }
+);
+
+
+startButton.addEventListener(
+    'click',
+    launch
+);
+
+
+pauseButton.addEventListener(
+    'click',
+    () => {
+
+        if (state === 'playing') {
+            pause();
+
+        } else if (state === 'paused') {
+            launch();
+        }
+    }
+);
+
+
+soundButton.addEventListener(
+    'click',
+    () => {
+
+        soundOn = !soundOn;
+
+        soundButton.textContent =
+            soundOn
+                ? '♫ 音效開'
+                : '♫ 音效關';
+
+        soundButton.setAttribute(
+            'aria-pressed',
+            String(soundOn)
+        );
+
+        if (soundOn) {
+            beep(
+                660,
+                .1,
+                'triangle'
+            );
+        }
+    }
+);
+
+
+window.addEventListener(
+    'keydown',
+    event => {
+
+        if (
+            [
+                'ArrowLeft',
+                'ArrowRight',
+                ' '
+            ].includes(event.key)
+        ) {
+            event.preventDefault();
+        }
+
+        keys.add(event.key);
+
+
+        if (
+            event.key === ' ' &&
+            !event.repeat
+        ) {
+
+            if (
+                state === 'playing' &&
+                !ball.stuck
+            ) {
+                pause();
+
+            } else if (
+                state === 'paused' ||
+                state === 'ready' ||
+                ball.stuck
+            ) {
+                launch();
+            }
+        }
+
+
+        if (
+            event.key.toLowerCase() === 'r'
+        ) {
+
+            resetGame();
+
+            state = 'ready';
+
+            showOverlay(
+                '準備開打？',
+                '移動球拍接住彈珠，清空所有彩色磚塊！',
+                '開始遊戲　▶'
+            );
+        }
+    }
+);
+
+
+window.addEventListener(
+    'keyup',
+    event => {
+        keys.delete(event.key);
+    }
+);
+
+
+window.addEventListener(
+    'blur',
+    () => {
+        keys.clear();
+    }
+);
+
+
+resetGame();
+
+requestAnimationFrame(frame);
+
+})();
+</script>
+
+</body>
+</html>
